@@ -46,8 +46,7 @@ class LoggingErrorHandler implements ErrorHandlerInterface
             . get_class($exception) . ': ' . $exception->getMessage() . '(' . $exception->getCode() . ') on line '
             . $exception->getLine() . ' in ' . $exception->getFile();
 
-        $this->logger->log(
-            LOG_ERR,
+        $this->logger->error(
             $errorMessage,
             [
                 'tag'      => 'error',
