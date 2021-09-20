@@ -15,6 +15,17 @@ class LoggingErrorHandler implements ErrorHandlerInterface
     ) {
     }
 
+    /**
+     * @return array<string,mixed>|null
+     */
+    public function __debugInfo(): ?array
+    {
+        return [
+            'logger'              => '** Instance of ' . get_class($this->logger),
+            'errorLevelConverter' => $this->errorLevelConverter,
+        ];
+    }
+
     public function handleError(
         int $errorLevel,
         string $message,
