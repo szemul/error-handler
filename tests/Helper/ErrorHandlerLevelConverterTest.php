@@ -9,7 +9,6 @@ use Szemul\ErrorHandler\Helper\ErrorHandlerLevelConverter;
 
 class ErrorHandlerLevelConverterTest extends TestCase
 {
-
     /**
      * @dataProvider getErrorLevelDescriptions
      */
