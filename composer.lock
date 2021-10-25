@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2c5b175b85aa538e922948173181ae34",
+    "content-hash": "3ad3f7723cbb2e4a2de6f38aef90f074",
     "packages": [
         {
             "name": "psr/log",
@@ -4254,6 +4254,69 @@
                 "source": "https://github.com/webmozarts/assert/tree/1.10.0"
             },
             "time": "2021-03-09T10:59:23+00:00"
+        },
+        {
+            "name": "wmde/psr-log-test-doubles",
+            "version": "2.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/wmde/PsrLogTestDoubles.git",
+                "reference": "1978984525fa599f74cedb414e13db0354eaf29d"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/wmde/PsrLogTestDoubles/zipball/1978984525fa599f74cedb414e13db0354eaf29d",
+                "reference": "1978984525fa599f74cedb414e13db0354eaf29d",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.1",
+                "psr/log": "~1.0"
+            },
+            "require-dev": {
+                "mediawiki/mediawiki-codesniffer": "~0.6.0",
+                "ockcyp/covers-validator": "~0.4",
+                "phpunit/phpunit": "~6.1",
+                "squizlabs/php_codesniffer": "~2.5"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.1.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "WMDE\\PsrLogTestDoubles\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "GPL-2.0+"
+            ],
+            "description": "Test Doubles for the PSR-3 Logger Interface",
+            "homepage": "https://github.com/wmde/PsrLogTestDoubles",
+            "keywords": [
+                "Fixture",
+                "LoggerSpy",
+                "Test Doubles",
+                "fixtures",
+                "log",
+                "logger spy",
+                "mock",
+                "mocks",
+                "psr",
+                "psr-3",
+                "spies",
+                "spy",
+                "test",
+                "test double"
+            ],
+            "support": {
+                "issues": "https://github.com/wmde/PsrLogTestDoubles/issues",
+                "source": "https://github.com/wmde/PsrLogTestDoubles/tree/master"
+            },
+            "time": "2017-05-23T13:10:22+00:00"
         }
     ],
     "aliases": [],

@@ -12,7 +12,8 @@
         "jetbrains/phpstorm-attributes": "^1.0",
         "mockery/mockery": "^1.0",
         "phpstan/phpstan": "^0.12.80",
-        "phpunit/phpunit": "^9.5.5"
+        "phpunit/phpunit": "^9.5.5",
+        "wmde/psr-log-test-doubles": "^2.2"
     },
     "autoload": {
         "psr-4": {

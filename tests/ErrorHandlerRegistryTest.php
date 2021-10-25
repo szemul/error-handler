@@ -8,14 +8,20 @@ use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Mockery\LegacyMockInterface;
 use Mockery\MockInterface;
+use RuntimeException;
 use Szemul\ErrorHandler\ErrorHandlerRegistry;
 use PHPUnit\Framework\TestCase;
+use Szemul\ErrorHandler\Exception\ExceptionWhileHandlingErrorException;
+use Szemul\ErrorHandler\Exception\ExceptionWhileHandlingExceptionException;
 use Szemul\ErrorHandler\Handler\ErrorHandlerInterface;
 use Szemul\ErrorHandler\Terminator\TerminatorInterface;
+use Throwable;
 
 class ErrorHandlerRegistryTest extends TestCase
 {
     use MockeryPHPUnitIntegration;
+
+    private const ERROR_MESSAGE = 'error message';
 
     private ErrorHandlerRegistry                                  $sut;
     private TerminatorInterface|MockInterface|LegacyMockInterface $terminator;
@@ -55,16 +61,63 @@ class ErrorHandlerRegistryTest extends TestCase
         $this->sut->removeErrorHandler($handler2);
     }
 
+    public function testHandleErrorWithNonFatalError(): void
+    {
+        $handler = $this->getHandler();
+        $this->sut->addErrorHandler($handler);
+        $file = __FILE__;
+        $line = __LINE__;
+
+        $this->expectErrorHandled($handler, E_USER_WARNING, $file, $line, false);
+
+        $this->sut->handleError(E_USER_WARNING, self::ERROR_MESSAGE, $file, $line);
+    }
+
+    public function testHandleErrorWithFatalError(): void
+    {
+        $handler = $this->getHandler();
+        $this->sut->addErrorHandler($handler);
+        $file = __FILE__;
+        $line = __LINE__;
+
+        $this->expectErrorHandled($handler, E_ERROR, $file, $line, true);
+        $this->expectTerminated();
+
+        $this->sut->handleError(E_ERROR, self::ERROR_MESSAGE, $file, $line);
+    }
+
     private function getHandler(): ErrorHandlerInterface|MockInterface|LegacyMockInterface
     {
         return Mockery::mock(ErrorHandlerInterface::class);
     }
 
-    private function expectExceptionHandled(ErrorHandlerInterface|MockInterface|LegacyMockInterface $errorHandler, Exception $exception): void
-    {
+    private function expectExceptionHandled(
+        ErrorHandlerInterface|MockInterface|LegacyMockInterface $errorHandler,
+        Throwable $exception,
+    ): void {
         // @phpstan-ignore-next-line
         $errorHandler->shouldReceive('handleException')
             ->once()
             ->with($exception, Mockery::any());
+    }
+
+    private function expectErrorHandled(
+        ErrorHandlerInterface|MockInterface|LegacyMockInterface $errorHandler,
+        int $errorLevel,
+        string $file,
+        int $line,
+        bool $isErrorFatal,
+    ): void {
+        // @phpstan-ignore-next-line
+        $errorHandler->shouldReceive('handleError')
+            ->once()
+            ->with($errorLevel, self::ERROR_MESSAGE, $file, $line, Mockery::any(), $isErrorFatal, Mockery::any());
+    }
+
+    private function expectTerminated(): void
+    {
+        // @phpstan-ignore-next-line
+        $this->terminator->shouldReceive('terminate')
+            ->with(TerminatorInterface::EXIT_CODE_FATAL_ERROR);
     }
 }
