@@ -11,6 +11,7 @@ use Mockery\MockInterface;
 use Szemul\ErrorHandler\ErrorHandlerRegistry;
 use PHPUnit\Framework\TestCase;
 use Szemul\ErrorHandler\Handler\ErrorHandlerInterface;
+use Szemul\ErrorHandler\Helper\ErrorIdGenerator;
 use Szemul\ErrorHandler\Terminator\TerminatorInterface;
 use Throwable;
 
@@ -19,23 +20,27 @@ class ErrorHandlerRegistryTest extends TestCase
     use MockeryPHPUnitIntegration;
 
     private const ERROR_MESSAGE = 'error message';
+    private const ERROR_ID      = 'errorId';
 
     private ErrorHandlerRegistry                                  $sut;
     private TerminatorInterface|MockInterface|LegacyMockInterface $terminator;
+    private ErrorIdGenerator|MockInterface|LegacyMockInterface    $errorIdGenerator;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->terminator = Mockery::mock(TerminatorInterface::class);
-        $this->sut        = new ErrorHandlerRegistry($this->terminator); // @phpstan-ignore-line
+        $this->terminator       = Mockery::mock(TerminatorInterface::class);
+        $this->errorIdGenerator = Mockery::mock(ErrorIdGenerator::class);
+
+        $this->sut = new ErrorHandlerRegistry($this->terminator, $this->errorIdGenerator); // @phpstan-ignore-line
     }
 
     public function testAddAndRemove(): void
     {
-        $exception1 = new Exception();
-        $exception2 = new Exception();
-        $exception3 = new Exception();
+        $exception1 = new Exception('exception1');
+        $exception2 = new Exception('exception2');
+        $exception3 = new Exception('exception3');
         $this->sut->handleException($exception1);
 
         $handler1 = $this->getHandler();
@@ -43,6 +48,8 @@ class ErrorHandlerRegistryTest extends TestCase
         $this->expectExceptionHandled($handler1, $exception1);
         $this->expectExceptionHandled($handler2, $exception1);
         $this->expectExceptionHandled($handler2, $exception2);
+        $this->expectErrorIdGenerated($exception1->getMessage(), $exception1->getFile(), $exception1->getLine());
+        $this->expectErrorIdGenerated($exception2->getMessage(), $exception2->getFile(), $exception2->getLine());
 
         $this->sut->addErrorHandler($handler1);
         $this->sut->addErrorHandler($handler2);
@@ -65,6 +72,7 @@ class ErrorHandlerRegistryTest extends TestCase
         $file = __FILE__;
         $line = __LINE__;
 
+        $this->expectErrorIdGenerated(self::ERROR_MESSAGE, $file, $line);
         $this->expectErrorHandled($handler, E_USER_WARNING, $file, $line, false);
 
         $this->sut->handleError(E_USER_WARNING, self::ERROR_MESSAGE, $file, $line);
@@ -77,6 +85,7 @@ class ErrorHandlerRegistryTest extends TestCase
         $file = __FILE__;
         $line = __LINE__;
 
+        $this->expectErrorIdGenerated(self::ERROR_MESSAGE, $file, $line);
         $this->expectErrorHandled($handler, E_ERROR, $file, $line, true);
         $this->expectTerminated();
 
@@ -95,7 +104,7 @@ class ErrorHandlerRegistryTest extends TestCase
         // @phpstan-ignore-next-line
         $errorHandler->shouldReceive('handleException')
             ->once()
-            ->with($exception, Mockery::any());
+            ->with($exception, self::ERROR_ID);
     }
 
     private function expectErrorHandled(
@@ -108,7 +117,7 @@ class ErrorHandlerRegistryTest extends TestCase
         // @phpstan-ignore-next-line
         $errorHandler->shouldReceive('handleError')
             ->once()
-            ->with($errorLevel, self::ERROR_MESSAGE, $file, $line, Mockery::any(), $isErrorFatal, Mockery::any());
+            ->with($errorLevel, self::ERROR_MESSAGE, $file, $line, self::ERROR_ID, $isErrorFatal, Mockery::any());
     }
 
     private function expectTerminated(): void
@@ -116,5 +125,14 @@ class ErrorHandlerRegistryTest extends TestCase
         // @phpstan-ignore-next-line
         $this->terminator->shouldReceive('terminate')
             ->with(TerminatorInterface::EXIT_CODE_FATAL_ERROR);
+    }
+
+    private function expectErrorIdGenerated(string $message, string $file, int $line): void
+    {
+        // @phpstan-ignore-next-line
+        $this->errorIdGenerator->shouldReceive('generateErrorId')
+            ->once()
+            ->with($message, $file, $line)
+            ->andReturn(self::ERROR_ID);
     }
 }

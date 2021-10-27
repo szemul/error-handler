@@ -7,6 +7,7 @@ use Szemul\ErrorHandler\Exception\ErrorHandlerException;
 use Szemul\ErrorHandler\Exception\ExceptionWhileHandlingErrorException;
 use Szemul\ErrorHandler\Exception\ExceptionWhileHandlingExceptionException;
 use Szemul\ErrorHandler\Handler\ErrorHandlerInterface;
+use Szemul\ErrorHandler\Helper\ErrorIdGenerator;
 use Szemul\ErrorHandler\ShutdownHandler\ShutdownHandlerInterface;
 use Szemul\ErrorHandler\Terminator\TerminatorInterface;
 use Throwable;
@@ -18,7 +19,7 @@ class ErrorHandlerRegistry implements ShutdownHandlerInterface
     protected ?string $lastHandledErrorId = null;
     protected bool    $isRegistered       = false;
 
-    public function __construct(protected TerminatorInterface $terminator, protected int $errorHandlingIdTimeout = 600)
+    public function __construct(protected TerminatorInterface $terminator, protected ErrorIdGenerator $errorIdGenerator)
     {
     }
 
@@ -87,7 +88,7 @@ class ErrorHandlerRegistry implements ShutdownHandlerInterface
 
         $isErrorFatal = $this->isErrorFatal($errorLevel);
 
-        $errorId = $this->generateErrorId($message, $file, $line);
+        $errorId = $this->errorIdGenerator->generateErrorId($message, $file, $line);
 
         $backTrace = debug_backtrace();
         // We are the first element, remove it from the trace
@@ -120,7 +121,11 @@ class ErrorHandlerRegistry implements ShutdownHandlerInterface
             return;
         }
 
-        $errorId = $this->generateErrorId($handledException->getMessage(), $handledException->getFile(), $handledException->getLine());
+        $errorId = $this->errorIdGenerator->generateErrorId(
+            $handledException->getMessage(),
+            $handledException->getFile(),
+            $handledException->getLine(),
+        );
 
         foreach ($this->errorHandlers as $errorHandler) {
             try {
@@ -159,7 +164,7 @@ class ErrorHandlerRegistry implements ShutdownHandlerInterface
             return;
         }
 
-        $errorId = $this->generateErrorId($error['message'], $error['file'], $error['line']);
+        $errorId = $this->errorIdGenerator->generateErrorId($error['message'], $error['file'], $error['line']);
 
         if ($errorId !== $this->lastHandledErrorId) {
             // Make sure that this error has not been already handled
@@ -181,22 +186,6 @@ class ErrorHandlerRegistry implements ShutdownHandlerInterface
         }
 
         $this->terminator->terminate(TerminatorInterface::EXIT_CODE_FATAL_ERROR);
-    }
-
-    /**
-     * Returns an error ID based on the message, file, line, hostname and current time.
-     */
-    protected function generateErrorId(string $message, string $file, int $line): string
-    {
-        if (0 == $this->errorHandlingIdTimeout) {
-            return md5($message . $file . $line . php_uname('n'));
-        } elseif ($this->errorHandlingIdTimeout < 0) {
-            return md5($message . $file . $line . php_uname('n') . uniqid(''));
-        } else {
-            // @codeCoverageIgnoreStart
-            return md5($message . $file . $line . php_uname('n') . floor(time() / $this->errorHandlingIdTimeout));
-            // @codeCoverageIgnoreEnd
-        }
     }
 
     protected function isErrorFatal(int $errorLevel): bool
