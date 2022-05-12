@@ -8,7 +8,7 @@ use Throwable;
 interface ErrorHandlerInterface
 {
     /**
-     * @param array<int,array> $backTrace
+     * @param array<int,mixed[]> $backTrace
      */
     public function handleError(
         int $errorLevel,

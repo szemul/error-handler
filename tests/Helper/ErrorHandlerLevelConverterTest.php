@@ -26,7 +26,7 @@ class ErrorHandlerLevelConverterTest extends TestCase
     }
 
     /**
-     * @return array[]
+     * @return mixed[][]
      */
     public function getErrorLevelDescriptions(): array
     {
@@ -52,7 +52,7 @@ class ErrorHandlerLevelConverterTest extends TestCase
     }
 
     /**
-     * @return array[]
+     * @return mixed[][]
      */
     public function getLogPriorityLevels(): array
     {

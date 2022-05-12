@@ -18,7 +18,6 @@ class ExceptionWhileHandlingExceptionExceptionTest extends TestCase
     use MockeryPHPUnitIntegration;
 
     private const ERROR_ID                   = 'errorId';
-    private const ERROR_MESSAGE              = 'Error happened';
     private const THROWABLE_MESSAGE          = 'Throwable message';
     private const ORIGINAL_EXCEPTION_MESSAGE = 'Original exception message';
 
