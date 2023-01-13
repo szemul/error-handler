@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Szemul\ErrorHandler\Test;
@@ -8,8 +9,10 @@ use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Mockery\LegacyMockInterface;
 use Mockery\MockInterface;
-use Szemul\ErrorHandler\ErrorHandlerRegistry;
 use PHPUnit\Framework\TestCase;
+use Szemul\ErrorHandler\ErrorHandlerRegistry;
+use Szemul\ErrorHandler\Exception\ExceptionWhileHandlingExceptionException;
+use Szemul\ErrorHandler\Exception\UnHandledException;
 use Szemul\ErrorHandler\Handler\ErrorHandlerInterface;
 use Szemul\ErrorHandler\Helper\ErrorIdGenerator;
 use Szemul\ErrorHandler\Terminator\TerminatorInterface;
@@ -92,19 +95,90 @@ class ErrorHandlerRegistryTest extends TestCase
         $this->sut->handleError(E_ERROR, self::ERROR_MESSAGE, $file, $line);
     }
 
+    public function testHandleException(): void
+    {
+        $errorHandler = $this->getHandler();
+        $exception    = new Exception('test');
+
+        $this->sut->addErrorHandler($errorHandler);
+        $this->expectErrorIdGenerated($exception->getMessage(), $exception->getFile(), $exception->getLine());
+        $this->expectExceptionHandled($errorHandler, $exception);
+
+        $this->sut->handleException($exception);
+    }
+
+    public function testHandleExceptionWhenUnhandledExceptionThrown_shouldReThrow(): void
+    {
+        $errorHandler     = $this->getHandler();
+        $exception        = new Exception('test');
+        $handlerException = new UnHandledException('unhandled');
+
+        $this->sut->addErrorHandler($errorHandler);
+        $this->expectErrorIdGenerated($exception->getMessage(), $exception->getFile(), $exception->getLine());
+        $this->expectExceptionHandlerThrowsException($errorHandler, $exception, $handlerException);
+
+        $this->expectExceptionObject($handlerException);
+        $this->sut->handleException($exception);
+    }
+
+    public function testHandleExceptionWhenExceptionThrown_shouldReThrowAsHandlerException(): void
+    {
+        $errorHandler     = $this->getHandler();
+        $exception        = new Exception('test');
+        $handlerException = new Exception('handler');
+
+        $this->sut->addErrorHandler($errorHandler);
+        $this->expectErrorIdGenerated($exception->getMessage(), $exception->getFile(), $exception->getLine());
+        $this->expectExceptionHandlerThrowsException($errorHandler, $exception, $handlerException);
+
+        $this->expectErrorIdGeneratedForHandlerException();
+        $this->expectHandlerExceptionHandled($errorHandler);
+
+        $this->sut->handleException($exception);
+    }
+
     private function getHandler(): ErrorHandlerInterface|MockInterface|LegacyMockInterface
     {
         return Mockery::mock(ErrorHandlerInterface::class);
     }
 
     private function expectExceptionHandled(
-        ErrorHandlerInterface|MockInterface|LegacyMockInterface $errorHandler,
+        ErrorHandlerInterface|MockInterface $errorHandler,
         Throwable $exception,
     ): void {
         // @phpstan-ignore-next-line
-        $errorHandler->shouldReceive('handleException')
-            ->once()
+        $errorHandler
+            ->expects('handleException')
+            ->ordered()
             ->with($exception, self::ERROR_ID);
+    }
+
+    private function expectHandlerExceptionHandled(
+        ErrorHandlerInterface|MockInterface $errorHandler,
+    ): void {
+        // @phpstan-ignore-next-line
+        $errorHandler
+            ->expects('handleException')
+            ->ordered()
+            ->with(
+                Mockery::on(function (Throwable $throwable) {
+                    return $throwable instanceof ExceptionWhileHandlingExceptionException;
+                }),
+                self::ERROR_ID,
+            );
+    }
+
+    private function expectExceptionHandlerThrowsException(
+        ErrorHandlerInterface|MockInterface $errorHandler,
+        Throwable $exception,
+        Throwable $exceptionToThrow,
+    ): void {
+        // @phpstan-ignore-next-line
+        $errorHandler
+            ->expects('handleException')
+            ->ordered()
+            ->with($exception, self::ERROR_ID)
+            ->andThrow($exceptionToThrow);
     }
 
     private function expectErrorHandled(
@@ -123,16 +197,24 @@ class ErrorHandlerRegistryTest extends TestCase
     private function expectTerminated(): void
     {
         // @phpstan-ignore-next-line
-        $this->terminator->shouldReceive('terminate')
+        $this->terminator->expects('terminate')
             ->with(TerminatorInterface::EXIT_CODE_FATAL_ERROR);
     }
 
     private function expectErrorIdGenerated(string $message, string $file, int $line): void
     {
         // @phpstan-ignore-next-line
-        $this->errorIdGenerator->shouldReceive('generateErrorId')
-            ->once()
+        $this->errorIdGenerator->expects('generateErrorId')
+            ->ordered()
             ->with($message, $file, $line)
+            ->andReturn(self::ERROR_ID);
+    }
+
+    private function expectErrorIdGeneratedForHandlerException(): void
+    {
+        // @phpstan-ignore-next-line
+        $this->errorIdGenerator->expects('generateErrorId')
+            ->ordered()
             ->andReturn(self::ERROR_ID);
     }
 }

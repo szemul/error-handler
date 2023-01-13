@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Szemul\ErrorHandler;
@@ -6,6 +7,7 @@ namespace Szemul\ErrorHandler;
 use Szemul\ErrorHandler\Exception\ErrorHandlerException;
 use Szemul\ErrorHandler\Exception\ExceptionWhileHandlingErrorException;
 use Szemul\ErrorHandler\Exception\ExceptionWhileHandlingExceptionException;
+use Szemul\ErrorHandler\Exception\UnHandledException;
 use Szemul\ErrorHandler\Handler\ErrorHandlerInterface;
 use Szemul\ErrorHandler\Helper\ErrorIdGenerator;
 use Szemul\ErrorHandler\ShutdownHandler\ShutdownHandlerInterface;
@@ -23,13 +25,13 @@ class ErrorHandlerRegistry implements ShutdownHandlerInterface
     {
     }
 
-    /** @codeCoverageIgnore  */
+    /** @codeCoverageIgnore */
     public function __destruct()
     {
         $this->unregister();
     }
 
-    /** @codeCoverageIgnore  */
+    /** @codeCoverageIgnore */
     public function register(): static
     {
         set_error_handler([$this, 'handleError']);
@@ -39,7 +41,7 @@ class ErrorHandlerRegistry implements ShutdownHandlerInterface
         return $this;
     }
 
-    /** @codeCoverageIgnore  */
+    /** @codeCoverageIgnore */
     public function unregister(): static
     {
         if ($this->isRegistered) {
@@ -115,29 +117,31 @@ class ErrorHandlerRegistry implements ShutdownHandlerInterface
         return $returnValue;
     }
 
-    public function handleException(Throwable $handledException): void
+    public function handleException(Throwable $exception): void
     {
         if (empty($this->errorHandlers)) {
             return;
         }
 
         $errorId = $this->errorIdGenerator->generateErrorId(
-            $handledException->getMessage(),
-            $handledException->getFile(),
-            $handledException->getLine(),
+            $exception->getMessage(),
+            $exception->getFile(),
+            $exception->getLine(),
         );
 
         foreach ($this->errorHandlers as $errorHandler) {
             try {
-                $errorHandler->handleException($handledException, $errorId);
-            } catch (Throwable $thrownException) {
-                if (!($handledException instanceof ErrorHandlerException)) {
+                $errorHandler->handleException($exception, $errorId);
+            } catch (Throwable $handlerException) {
+                if ($handlerException instanceof UnHandledException) {
+                    throw $handlerException;
+                } elseif (!($exception instanceof ErrorHandlerException)) {
                     $this->handleException(
                         new ExceptionWhileHandlingExceptionException(
                             $errorHandler,
-                            $thrownException,
+                            $handlerException,
                             $errorId,
-                            $handledException,
+                            $exception,
                         ),
                     );
                 }
